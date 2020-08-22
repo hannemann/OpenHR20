@@ -11,10 +11,10 @@ class contend_history extends contend {
     if ($offset<0) $offset=0;
 	$order=' ORDER BY time DESC';
 
-    $result = $db->query("SELECT * FROM log WHERE addr=$this->addr ORDER BY time DESC LIMIT $offset,$limit");
+    $result = $db->query("SELECT * FROM log WHERE addr=$this->addr AND id IN ( select id from log order by id desc,addr limit 20000 ) ORDER BY time DESC LIMIT $offset,$limit");
 
-    if ($offset>0) echo "<a href=\"?page=history&addr=$this->addr&offset=".($offset-$limit)."&limit=$limit\">previous $limit</a>";
-    echo " <a href=\"?page=history&addr=$this->addr&offset=".($offset+$limit)."&limit=$limit\">next $limit</a>";
+    if ($offset>0) echo "<a href=\"?page=history&addr=$this->addr&offset=".($offset-50)."&limit=$limit\">previous $limit</a>";
+    echo " <a href=\"?page=history&addr=$this->addr&offset=".($offset+50)."&limit=$limit\">next $limit</a>";
 
     echo "<table>\n";
     echo "<tr><th>time</th><th>mode</th><th>valve</th><th>real</th><th>wanted</th><th>battery</th>";

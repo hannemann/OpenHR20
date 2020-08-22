@@ -8,7 +8,7 @@ class contend_status extends contend {
     global $db,$room_name;
     $cmd=null;
     if ($_POST['type'] == 'addr') {
-      $result = $db->query("SELECT * FROM log WHERE addr=$this->addr ORDER BY TIME DESC LIMIT 1");
+      $result = $db->query("SELECT * FROM log WHERE addr=$this->addr AND id IN ( select id from log order by id desc, addr limit 20000 ) ORDER BY TIME DESC LIMIT 1");
       // foreach ($_POST as $k=>$p) echo "<div>$k => $p</div>";
       if ($row = $result->fetchArray()) {
 	if ((isset($_POST['auto_mode']) && ($row['mode']!=$_POST['auto_mode']))) {
@@ -29,9 +29,10 @@ class contend_status extends contend {
 	}
       }  
     } else if ($_POST['type'] == 'all') {
-      foreach ($room_name as $k=>$v) {
-	$result = $db->query("SELECT * FROM log WHERE addr=$k ORDER BY time DESC LIMIT 1");
-	if ($row = $result->fetchArray()) {
+	$keys = implode(',', array_keys($room_name));
+	$result = $db->query("SELECT * FROM log WHERE addr IN ($keys) AND id IN ( select id from log order by id desc, addr limit 20000 ) GROUP BY addr;");
+	while ($row = $result->fetchArray()) {
+	  $k = $row['addr'];
 	  if ((isset($_POST["auto_mode_$k"]) && ($row['mode']!=$_POST["auto_mode_$k"]))) {
 	    switch ($_POST["auto_mode_$k"]) {
 	      case 'AUTO':
@@ -49,7 +50,6 @@ class contend_status extends contend {
 	    if ($cmd[$k]) $cmd[$k][]='D'; // update status
 	  }
 	}  
-      }
     }
     return $cmd;
   }  
@@ -58,7 +58,7 @@ class contend_status extends contend {
     global $db,$room_name,$chart_hours;
     if ($this->addr > 0) {
       echo ('<div><a href="?page=queue&read_info=1&addr='.$this->addr.'">Make refresh requests for all values</a></div>');
-      $result = $db->query("SELECT * FROM log WHERE addr=$this->addr ORDER BY time DESC LIMIT 1");
+      $result = $db->query("SELECT * FROM log WHERE addr=$this->addr AND id IN ( select id from log order by id desc, addr limit 20000 ) ORDER BY time DESC LIMIT 1");
 
       if ($row = $result->fetchArray()) {
 	echo '<form method="post" action="?page=status&amp;addr='.$this->addr.'" />';
@@ -84,7 +84,7 @@ class contend_status extends contend {
       <!--[if IE]><script language="javascript" type="text/javascript" src="js/excanvas.min.js"></script><![endif]-->
       <script language="javascript" type="text/javascript" src="js/jquery.min.js"></script>
       <script language="javascript" type="text/javascript" src="js/jquery.flot.min.js"></script>
-      <script language="javascript" type="text/javascript" src="js/jquery.flot.selection.min.js"></script>
+     <!-- <script language="javascript" type="text/javascript" src="js/jquery.flot.selection.min.js"></script> -->
       
       
       <script id="source" language="javascript" type="text/javascript">
@@ -94,7 +94,7 @@ class contend_status extends contend {
 	    $now = time();
 	    $min_time = $now-$chart_hours*60*60;
 	    
-	    $result = $db->query("SELECT * FROM log WHERE addr=$this->addr AND time>$min_time ORDER BY time");    
+	    $result = $db->query("SELECT * FROM log WHERE addr=$this->addr AND time>$min_time AND id IN ( select id from log order by id desc, addr limit 20000 ) ORDER BY time");    
 	    $real=array();$wanted=array();$valve=array();$markings=array();
 	    $off=date_offset_get(new DateTime);
 	    $window=-1; $win_pos=0;
@@ -193,26 +193,26 @@ class contend_status extends contend {
       }
 
     } else {
-//	this SELECT is teoreticaly best practice, but unaceptable slow
-//      $result = $db->query("SELECT * FROM log WHERE id IN (SELECT min(id) from log GROUP BY addr) ORDER BY addr");
-//      $result = $db->query("SELECT * FROM log l,(SELECT min(id) AS m from log GROUP BY addr) AS m WHERE m.m=l.id");
       
 	echo '<form method="post" action="?page=status&amp;addr='.$this->addr.'" /><table>';
 	echo '<tr><th>valve</th><th>Last update</th><th>Mode</th><th>Valve [%]</th><th>Real [&deg;C]</th>'
 	    .'<th>Wanted [&deg;C]</th><th>Battery</th><th>Error</th><th>Window</th></tr>';
-	foreach ($room_name as $k=>$v) {
-	  $result = $db->query("SELECT * FROM log WHERE addr=$k ORDER BY time DESC LIMIT 1");
-	  echo "<tr><td><a href=\"?page=status&amp;addr=$k\">$v</a></td>";
-	  if ($row = $result->fetchArray()) {
+
+	$keys = implode(',', array_keys($room_name));
+
+	  $result = $db->query("SELECT * FROM log WHERE addr IN ($keys) AND id IN ( select id from log order by id desc, addr limit 20000 ) GROUP BY addr ORDER BY addr;");
+	  while ($row = $result->fetchArray()) {
+            $k = $row['addr'];
+	    echo "<tr><td><a href=\"?page=status&amp;addr=$k\">" . $room_name[$k] . "</a></td>";
 	    $age=time()-$row['time'];
 	    if ($age > $GLOBALS['error_age']) {
-        $age_t=' class="error"';
-      } else if ($age > $GLOBALS['warning_age']) {
-        $age_t=' class="warning"';
-      }  else {
-        $age_t='';
-        // $age_t=' class="ok"';
-      }
+               $age_t=' class="error"';
+            } else if ($age > $GLOBALS['warning_age']) {
+               $age_t=' class="warning"';
+            }  else {
+               $age_t='';
+               // $age_t=' class="ok"';
+            }
 	    echo "<td$age_t>".format_time($row['time'])."</td><td>";
 	    echo   '<input type="radio" name="auto_mode_'.$k.'" value="AUTO"'.(($row['mode']=='AUTO')?' checked="checked"':'').'> AUTO<br />';
 	    echo   '<input type="radio" name="auto_mode_'.$k.'" value="MANU"'.(($row['mode']=='MANU')?' checked="checked"':'').'> MANU';
@@ -239,9 +239,6 @@ class contend_status extends contend {
       echo "</td>";
 	    
 	    echo "<td>".(($row['window'])?"open":"close")."</td>";
-	  } else {
-	    echo '<td class="error">NA</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>';
-	  }
 	  echo "</tr>";
 	}
 	echo '<input type="hidden" name="type" value="all">';
