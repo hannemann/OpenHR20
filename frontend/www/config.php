@@ -1,19 +1,26 @@
 <?php
 
-$db = new SQLite3("/tmp/openhr20.sqlite");
-$TIMEZONE="Europe/Warsaw";
+error_reporting(E_ALL ^ E_NOTICE);
+
+$db = new SQLite3("/nfsboot/heizung/openhr20.sqlite");
+$db->busyTimeout(60000);
+$TIMEZONE="Europe/Berlin";
 $RRD_ENABLE=true;
 $PLOTS_DIR = "plots";
 $RRD_DAYS = array (3, 7, 30, 90);
 
 
-
   // translation table for valve names
   // example:
    $room_name = array (
-    0x0a => 'sypialnia', // default setting in valves
-    0x0b => 'salon', // default setting in valves
-    0x0c => 'dzieciecy', // default setting in valves
+    0x08 => 'Wohnzimmer Rechts', // default setting in valves
+    0x09 => 'Wohnzimmer Links', // default setting in valves
+    0x0b => 'Daddelzimmer', // default setting in valves
+    0x0e => 'Badezimmer', // default setting in valves
+    0x0c => 'Schlafzimmer Rechts', // default setting in valves
+    0x0d => 'Schlafzimmer Links', // default setting in valves
+    0x0a => 'Küche', // default setting in valves
+    0x0f => 'Gaby', // default setting in valves
   ); 
 /*  $room_name = array (
     0x11 => 'decak',
