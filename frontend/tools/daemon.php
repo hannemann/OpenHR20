@@ -149,7 +149,25 @@ while(($line=fgets($fp,256))!==FALSE) {
 		if ($result = $db->query("SELECT COUNT(id) as count FROM command_queue WHERE addr = $addr")) {
 			if ($result && ($row = $result->fetchArray()) && 0 === $row['count']) {
 				echo PHP_EOL . 'Unlock device ' . $addr . PHP_EOL;
-				mqttSend($addr, ['addr' => $addr, 'synced' => true], $mqttRetainStat);
+				$message = ['addr' => $addr, 'synced' => true]; 
+				$items = explode(' ', substr($line, 1));
+				foreach ($items as $item) {
+                                        switch ($item{0}) {
+						case 'A':
+							$message['mode'] = 'AUTO';
+							break;
+						case '-':
+							$message['mode'] = '-';
+							break;
+						case 'M':
+							$message['mode'] = 'MANU';
+							break;
+						case 'S':
+							$message['wanted'] = (int)(substr($item,1)) / 100;
+							break;
+					}
+				}
+				mqttSend($addr, $message, $mqttRetainStat);
 			}
 		}
 		$force=true;
