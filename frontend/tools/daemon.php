@@ -223,7 +223,7 @@ while(($line=fgets($fp,256))!==FALSE) {
 				$debug=false;
 				// echo "data req addr $addr" . PHP_EOL;
 				$cTrans = $db->query("BEGIN TRANSACTION");
-				if ($result = $db->query("SELECT id,data FROM command_queue WHERE addr=".($addr&0x7f)." ORDER BY time LIMIT 25")) {
+				if ($result = $db->query("SELECT id,data FROM command_queue WHERE addr=".($addr&0x7f)." ORDER BY time LIMIT 20")) {
 					$weight=0;
 					$bank=0;
 					$send=0;
